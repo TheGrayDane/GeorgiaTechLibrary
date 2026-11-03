@@ -1,0 +1,60 @@
+services:
+  rabbitmq:
+    container_name: RabbitMQ
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672" # AMQP
+      - "5552:5552"   # STREAM
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_logs:/var/log/rabbitmq
+    networks:
+      BackEnd:
+        ipv4_address: 172.28.0.10  
+  postgres:
+    container_name: PostgreSql.Service
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/MAJOR/docker
+    networks:
+      BackEnd:
+        ipv4_address: 172.28.0.11
+  apigateway:
+    container_name: ApiGateway
+    #image: ${DOCKER_REGISTRY-}apigateway
+    build:
+      context: ./EvenCampHQ/Services/Gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    networks:
+      BackEnd:
+        ipv4_address: 172.28.0.40
+    depends_on:
+      postgres:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+
+volumes:
+  postgres_data: {}
+  rabbitmq_data: {}
+  rabbitmq_logs: {}
+networks:
+  BackEnd:
+    name: BackEnd
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
